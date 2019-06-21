@@ -93,13 +93,13 @@ for sample_label in args.sample_label:
 
                 dataset = np.concatenate((dataset, features))
 
-                if dataset.shape[0] >= args.MaxEvts:
+                if args.MaxEvts > 0 and dataset.shape[0] >= args.MaxEvts:
                     break
         except:
             errors += 1
             print('[{}]'.format(errors), fname, 'failed')
 
-        if dataset.shape[0] >= args.MaxEvts:
+        if args.MaxEvts > 0 and dataset.shape[0] >= args.MaxEvts:
             break
 
     print('Saving dataset with {} entries: '.format(dataset.shape[0]), outname)
