@@ -1,7 +1,7 @@
 import time, sys
 
 class ProgressBar():
-    def __init__(self, maxEntry, percentPrecision = 5):
+    def __init__(self, maxEntry, percentPrecision = 5, headLabel = ''):
         self.maxEntry = maxEntry
         self.percentPrecision = percentPrecision
 
@@ -9,7 +9,11 @@ class ProgressBar():
         self.nStep = nStep if nStep <= maxEntry else maxEntry
         self.setpSize = int(maxEntry/self.nStep)
 
-    def show(self, entry):
+        self.headLabel = headLabel
+
+        self.maxPrintoutLen = 0
+
+    def show(self, entry, tail_label = ''):
         if entry%self.setpSize==0:
             if entry>0:
                 sys.stdout.write('\r')
@@ -19,7 +23,8 @@ class ProgressBar():
             Progress = float(entry)/self.maxEntry
             nStepDone = int(Progress*self.nStep)
 
-            outLine = '['+'#'*nStepDone + '-'*(self.nStep-nStepDone) +']'+'  {}%'.format(int(100*Progress))
+            outLine = self.headLabel
+            outLine += '['+'#'*nStepDone + '-'*(self.nStep-nStepDone) +']'+'  {}%'.format(int(100*Progress))
 
             if entry>0:
                 timeleft = (self.maxEntry - float(entry))*(time.time() - self.startTime)/float(entry)
@@ -32,10 +37,17 @@ class ProgressBar():
                     timeleft/=3600
                     outLine += " - ETA:{:5.1f} h   ".format(timeleft)
 
+            outLine += tail_label
+            if len(outLine) > self.maxPrintoutLen:
+                self.maxPrintoutLen = len(outLine)
             sys.stdout.write(outLine)
             sys.stdout.flush()
 
         if entry==self.maxEntry-1:
-            outLine = '\r['+ '#'*self.nStep +']  100%'+'- Tot. time: {:.1f} s'.format(time.time() - self.startTime)
+            outLine = '\r' + self.headLabel
+            outLine +='['+ '#'*self.nStep +']  100% - Tot. time: {:.1f} s'.format(time.time() - self.startTime)
+            if self.maxPrintoutLen > len(outLine):
+                outLine += ' '*(self.maxPrintoutLen - len(outLine) + 2)
+            outLine += '\n'
             sys.stdout.write(outLine)
             sys.stdout.flush()
