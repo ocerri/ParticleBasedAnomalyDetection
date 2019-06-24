@@ -14,6 +14,7 @@ conda install pytorch torchvision -c pytorch
 # MacOS Binaries dont support CUDA, install from source if CUDA is needed
 # conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
 
+conda install matplotlib
 
 # Not used for the moment
 # pip install tensorflow==2.0.0-beta1
