@@ -102,35 +102,6 @@ for sample_label in args.sample_label:
         if args.MaxEvts > 0 and dataset.shape[0] >= args.MaxEvts:
             break
 
-    print('Saving dataset with {} entries: '.format(dataset.shape[0]), outname)
+    print('Saving dataset with {} entries from {} files: '.format(dataset.shape[0], i+1), outname)
     np.save(outname, dataset)
     print('\n')
-
-#
-#         #Remove Sphericity
-#         if hlf.shape[1] == 24 and list(f['HLF_Names'])[5] == 'SPH':
-#             hlf = np.delete(hlf, 4, 1)
-#         elif hlf.shape[1] != 23:
-#             print('Non matching shapes ---> Exiting')
-#             continue
-#
-#         #Change from radial to cathesian MET
-#         METp = hlf[:,1]*np.cos(hlf[:,2])
-#         METo = hlf[:,1]*np.sin(hlf[:,2])
-#         hlf[:,1] = METp
-#         hlf[:,2] = METo
-#
-#         hlf_train = np.concatenate((hlf_train, hlf))
-#
-#     if hlf_train.shape[0] > args.MaxNumber:
-#         print('Max number of {} overcome'.format(args.MaxNumber))
-#         print('At file', i, 'size:', hlf_train.shape[0], 'errors:', errors)
-#         break
-#
-#
-# print(hlf_train.shape)
-#
-# if hlf_train.shape[0] > 0:
-#     np.save(outname, hlf_train)
-# else:
-#     print('File empty. No output.')
