@@ -8,19 +8,23 @@ import datetime
 inpath = '/eos/project/d/dshep/TOPCLASS/BSMAnomaly_IsoLep_lt_45_pt_gt_23/'
 outpath = '/afs/cern.ch/user/o/ocerri/cernbox/ParticleBasedAnomalyDetection/data/'
 
-SM_labels = ['qcd_lepFilter_13TeV', 'ttbar_lepFilter_13TeV', 'Wlnu_lepFilter_13TeV', 'Zll_lepFilter_13TeV']
+SM_labels = ['ttbar_lepFilter_13TeV', 'Wlnu_lepFilter_13TeV', 'Zll_lepFilter_13TeV', 'qcd_lepFilter_13TeV']
 BSM_labels = ['leptoquark_LOWMASS_lepFilter_13TeV', 'Ato4l_lepFilter_13TeV']
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('sample_label', type=str, help='Name of the sample', nargs='+')
 parser.add_argument('-N', '--MaxEvts', type=int, default=1000, help='Max number of events')
-parser.add_argument('-n', '--MaxPart', type=int, default=10, help='Max number of particles per event')
+parser.add_argument('-n', '--MaxPart', type=int, default=20, help='Max number of particles per event')
 parser.add_argument('--order', type=str, default='Pt', help='Particle variable used to order particles')
 parser.add_argument('-i', '--input_path', type=str, default=inpath)
 parser.add_argument('-o', '--output_path', type=str, default=outpath)
 parser.add_argument('-F', '--force', action='store_true', default=False)
 args = parser.parse_args()
+
+if args.MaxPart < 15:
+    print('Number of particles per event too low, resetting it to 15.')
+    args.MaxPart = 15
 
 if len(args.sample_label) == 1:
     if args.sample_label[0] == 'SM':
@@ -34,7 +38,7 @@ print('')
 
 #Output directory
 date = datetime.date.today()
-outdir = '{}{:02d}{}_{}part_{}Order/'.format(date.year, date.month, date.day, args.MaxPart, args.order)
+outdir = '{}{:02d}{}_{}part_{}Order_v1/'.format(date.year, date.month, date.day, args.MaxPart, args.order)
 outdir = args.output_path + outdir
 
 if os.path.isdir(outdir):
@@ -43,7 +47,10 @@ if os.path.isdir(outdir):
         os.system('mkdir -p ' + outdir)
     else:
         print('Folder already existing')
-        exit()
+        if 'y' != input('Continue? [y/n]\n'):
+            print('Exiting...')
+            exit()
+        else: print('')
 else:
     os.system('mkdir -p ' + outdir)
 
@@ -80,17 +87,42 @@ for sample_label in args.sample_label:
 
             i_v = np.argmax(f['Particles_Names'][()].astype(np.str) == args.order)
 
-            parts_pt = f['Particles'][()][:,:,i_v]
-            idx = np.argpartition(parts_pt, -args.MaxPart)[:,-args.MaxPart:] #get the indexes of the top MaxPart ordered by i_v
+            for particles in f['Particles'][()]:
 
-            for particles, sel in zip(f['Particles'][()], idx):
+                # Get the muons
+                sel = particles[:, 18] > 0.5
+                # if np.sum(sel) < 5: continue
+                muons = particles[sel]
+                if muons.shape[0] > 5:
+                    muons_v = muons[:,i_v]
+                    idx = np.argpartition(muons_v, -5)[-5:]
+                    muons = muons[idx]
+
+                # Get the electrons
+                sel = particles[:, 17] > 0.5
+                electrons = particles[sel]
+                Nmax_ele = 10 - muons.shape[0]
+                if electrons.shape[0] > Nmax_ele:
+                    ele_v = electrons[:,i_v]
+                    idx = np.argpartition(ele_v, -Nmax_ele)[-Nmax_ele:]
+                    electrons = electrons[idx]
+
+                # Get photons and hadrons
+                sel = particles[:, 14] + particles[:, 15] + particles[:, 16] > 0.5
                 parts = particles[sel]
+                Nmax_parts = args.MaxPart - muons.shape[0] - electrons.shape[0]
+                if parts.shape[0] > Nmax_parts:
+                    parts_v = parts[:,i_v]
+                    idx = np.argpartition(parts_v, -Nmax_parts)[-Nmax_parts:]
+                    parts = parts[idx]
 
+                parts = np.concatenate((muons, electrons, parts))
                 pt_eta_phi = parts[:,5:8]
                 charge = parts[:, -1]
-                pId = 0*parts[:, 16] + 1*parts[:, 17] + 2*parts[:, 18] + 3*parts[:, 14] + 4*parts[:, 15]
-                features = np.column_stack((pt_eta_phi, charge, pId)).astype(np.float16).reshape((1, args.MaxPart, 5))
+                # 0 = Muon, 1 = Electron, 2 = Photon, 3 = Charged hadron, 4 = Neutral hadron
+                pId = 0*parts[:, 18] + 1*parts[:, 17] + 2*parts[:, 16] + 3*parts[:, 14] + 4*parts[:, 15]
 
+                features = np.column_stack((pt_eta_phi, charge, pId)).astype(np.float16).reshape((1, args.MaxPart, 5))
                 dataset = np.concatenate((dataset, features))
 
                 if args.MaxEvts > 0 and dataset.shape[0] >= args.MaxEvts:
