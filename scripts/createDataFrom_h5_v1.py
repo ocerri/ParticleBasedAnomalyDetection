@@ -4,11 +4,12 @@ import numpy as np
 import os
 import argparse
 import datetime
+import time
 
 inpath = '/eos/project/d/dshep/TOPCLASS/BSMAnomaly_IsoLep_lt_45_pt_gt_23/'
 outpath = '/afs/cern.ch/user/o/ocerri/cernbox/ParticleBasedAnomalyDetection/data/'
 
-SM_labels = ['ttbar_lepFilter_13TeV', 'Wlnu_lepFilter_13TeV', 'Zll_lepFilter_13TeV', 'qcd_lepFilter_13TeV']
+SM_labels = ['Zll_lepFilter_13TeV', 'ttbar_lepFilter_13TeV', 'Wlnu_lepFilter_13TeV', 'qcd_lepFilter_13TeV']
 BSM_labels = ['leptoquark_LOWMASS_lepFilter_13TeV', 'Ato4l_lepFilter_13TeV']
 
 
@@ -55,6 +56,7 @@ else:
     os.system('mkdir -p ' + outdir)
 
 
+last_time_printed = time.time()
 for sample_label in args.sample_label:
     outname = outdir+sample_label+'.npy'
 
@@ -74,8 +76,9 @@ for sample_label in args.sample_label:
         if errors > 10:
             print('Too many errors')
             exit(0)
-        if i%100 == 0 or i == len(file_list)-1:
+        if time.time() - last_time_printed > 30. or i%100 == 0 or i == len(file_list)-1:
             print('At file', i, 'size:', dataset.shape[0], 'errors:', errors)
+            last_time_printed = time.time()
         try:
             f = h5py.File(fname, 'r')
 
@@ -118,6 +121,8 @@ for sample_label in args.sample_label:
 
                 parts = np.concatenate((muons, electrons, parts))
                 pt_eta_phi = parts[:,5:8]
+                #Rescale Pt
+                parts[:,5] /= 10.
                 charge = parts[:, -1]
                 # 0 = Muon, 1 = Electron, 2 = Photon, 3 = Charged hadron, 4 = Neutral hadron
                 pId = 0*parts[:, 18] + 1*parts[:, 17] + 2*parts[:, 16] + 3*parts[:, 14] + 4*parts[:, 15]
