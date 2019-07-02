@@ -10,7 +10,7 @@ inpath = '/eos/project/d/dshep/TOPCLASS/BSMAnomaly_IsoLep_lt_45_pt_gt_23/'
 outpath = '/afs/cern.ch/user/o/ocerri/cernbox/ParticleBasedAnomalyDetection/data/'
 
 SM_labels = ['Zll_lepFilter_13TeV', 'ttbar_lepFilter_13TeV', 'Wlnu_lepFilter_13TeV', 'qcd_lepFilter_13TeV']
-BSM_labels = ['leptoquark_LOWMASS_lepFilter_13TeV', 'Ato4l_lepFilter_13TeV']
+BSM_labels = ['leptoquark_LOWMASS_lepFilter_13TeV', 'Ato4l_lepFilter_13TeV', 'hToTauTau_LOWMASS', 'hChToTauNu_LOWMASS']
 
 
 parser = argparse.ArgumentParser()
@@ -39,13 +39,15 @@ print('')
 
 #Output directory
 date = datetime.date.today()
-outdir = '{}{:02d}{}_{}part_{}Order_v1/'.format(date.year, date.month, date.day, args.MaxPart, args.order)
+outdir = '{}{:02d}{:02d}_{}part_{}Order_v1/'.format(date.year, date.month, date.day, args.MaxPart, args.order)
 outdir = args.output_path + outdir
 
 if os.path.isdir(outdir):
     if args.force:
-        os.system('rm -rf ' + outdir)
-        os.system('mkdir -p ' + outdir)
+        if 'y' != input('Remove folder? [y/n]\n'):
+            os.system('rm -rf ' + outdir)
+            os.system('mkdir -p ' + outdir)
+        else: print('')
     else:
         print('Folder already existing')
         if 'y' != input('Continue? [y/n]\n'):
@@ -58,7 +60,10 @@ else:
 
 last_time_printed = time.time()
 for sample_label in args.sample_label:
-    outname = outdir+sample_label+'.npy'
+    out_sample_label = sample_label.replace('_LOWMASS', '')
+    out_sample_label = out_sample_label.replace('_lepFilter', '')
+    out_sample_label = out_sample_label.replace('_13TeV', '')
+    outname = outdir+out_sample_label+'.npy'
 
     if os.path.isfile(outname):
         if args.force:
@@ -73,9 +78,9 @@ for sample_label in args.sample_label:
     print(sample_label, '({} files)'.format(len(file_list)))
     errors = 0
     for i, fname in enumerate(file_list):
-        if errors > 10:
+        if errors > 0.5*len(file_list):
             print('Too many errors')
-            exit(0)
+            break
         if time.time() - last_time_printed > 30. or i%100 == 0 or i == len(file_list)-1:
             print('At file', i, 'size:', dataset.shape[0], 'errors:', errors)
             last_time_printed = time.time()
@@ -100,6 +105,10 @@ for sample_label in args.sample_label:
                     muons_v = muons[:,i_v]
                     idx = np.argpartition(muons_v, -5)[-5:]
                     muons = muons[idx]
+                    muons_v = muons_v[idx]
+                    # Now order them
+                    idx = np.argsort(-muons_v)
+                    muons = muons[idx]
 
                 # Get the electrons
                 sel = particles[:, 17] > 0.5
@@ -109,6 +118,10 @@ for sample_label in args.sample_label:
                     ele_v = electrons[:,i_v]
                     idx = np.argpartition(ele_v, -Nmax_ele)[-Nmax_ele:]
                     electrons = electrons[idx]
+                    ele_v = ele_v[idx]
+                    # Now order them
+                    idx = np.argsort(-ele_v)
+                    electrons = electrons[idx]
 
                 # Get photons and hadrons
                 sel = particles[:, 14] + particles[:, 15] + particles[:, 16] > 0.5
@@ -117,6 +130,10 @@ for sample_label in args.sample_label:
                 if parts.shape[0] > Nmax_parts:
                     parts_v = parts[:,i_v]
                     idx = np.argpartition(parts_v, -Nmax_parts)[-Nmax_parts:]
+                    parts = parts[idx]
+                    parts_v = parts_v[idx]
+                    # Now order them
+                    idx = np.argsort(-parts_v)
                     parts = parts[idx]
 
                 parts = np.concatenate((muons, electrons, parts))
