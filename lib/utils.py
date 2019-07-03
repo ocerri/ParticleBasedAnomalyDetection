@@ -22,6 +22,7 @@ class EarlyStopping():
                 self.NoImprovement += 1
 
         if self.NoImprovement > self.patient:
+            print('Early Stopping triggered')
             return False
         else:
             return True

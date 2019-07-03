@@ -15,6 +15,7 @@ conda install pytorch torchvision -c pytorch
 # conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
 
 conda install matplotlib
+pip install gpustat
 
 # Not used for the moment
 # pip install tensorflow==2.0.0-beta1

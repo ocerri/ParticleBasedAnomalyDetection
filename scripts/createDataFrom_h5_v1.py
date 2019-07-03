@@ -6,6 +6,8 @@ import argparse
 import datetime
 import time
 
+from progressBar import ProgressBar
+
 inpath = '/eos/project/d/dshep/TOPCLASS/BSMAnomaly_IsoLep_lt_45_pt_gt_23/'
 outpath = '/afs/cern.ch/user/o/ocerri/cernbox/ParticleBasedAnomalyDetection/data/'
 
@@ -20,6 +22,7 @@ parser.add_argument('-n', '--MaxPart', type=int, default=20, help='Max number of
 parser.add_argument('--order', type=str, default='Pt', help='Particle variable used to order particles')
 parser.add_argument('-i', '--input_path', type=str, default=inpath)
 parser.add_argument('-o', '--output_path', type=str, default=outpath)
+parser.add_argument('-C', '--MaxChunk', type=int, default=30000, help='Max number of events')
 parser.add_argument('-F', '--force', action='store_true', default=False)
 args = parser.parse_args()
 
@@ -44,7 +47,7 @@ outdir = args.output_path + outdir
 
 if os.path.isdir(outdir):
     if args.force:
-        if 'y' != input('Remove folder? [y/n]\n'):
+        if 'y' == input('Remove folder? [y/n]\n'):
             os.system('rm -rf ' + outdir)
             os.system('mkdir -p ' + outdir)
         else: print('')
@@ -73,6 +76,8 @@ for sample_label in args.sample_label:
             continue
 
     dataset = np.zeros((0, args.MaxPart, 5)).astype(np.float16)
+    N_evts_processed = 0
+    N_chunks = 1
 
     file_list = glob(args.input_path + sample_label +'/*.h5')
     print(sample_label, '({} files)'.format(len(file_list)))
@@ -82,7 +87,7 @@ for sample_label in args.sample_label:
             print('Too many errors')
             break
         if time.time() - last_time_printed > 30. or i%100 == 0 or i == len(file_list)-1:
-            print('At file', i, 'size:', dataset.shape[0], 'errors:', errors)
+            print('At file', i, 'size:', N_evts_processed, 'errors:', errors)
             last_time_printed = time.time()
         try:
             f = h5py.File(fname, 'r')
@@ -105,10 +110,10 @@ for sample_label in args.sample_label:
                     muons_v = muons[:,i_v]
                     idx = np.argpartition(muons_v, -5)[-5:]
                     muons = muons[idx]
-                    muons_v = muons_v[idx]
-                    # Now order them
-                    idx = np.argsort(-muons_v)
-                    muons = muons[idx]
+                # Now order them
+                muons_v = muons[:, i_v]
+                idx = np.argsort(-muons_v)
+                muons = muons[idx]
 
                 # Get the electrons
                 sel = particles[:, 17] > 0.5
@@ -118,10 +123,10 @@ for sample_label in args.sample_label:
                     ele_v = electrons[:,i_v]
                     idx = np.argpartition(ele_v, -Nmax_ele)[-Nmax_ele:]
                     electrons = electrons[idx]
-                    ele_v = ele_v[idx]
-                    # Now order them
-                    idx = np.argsort(-ele_v)
-                    electrons = electrons[idx]
+                # Now order them
+                ele_v = electrons[:, i_v]
+                idx = np.argsort(-ele_v)
+                electrons = electrons[idx]
 
                 # Get photons and hadrons
                 sel = particles[:, 14] + particles[:, 15] + particles[:, 16] > 0.5
@@ -131,30 +136,67 @@ for sample_label in args.sample_label:
                     parts_v = parts[:,i_v]
                     idx = np.argpartition(parts_v, -Nmax_parts)[-Nmax_parts:]
                     parts = parts[idx]
-                    parts_v = parts_v[idx]
-                    # Now order them
-                    idx = np.argsort(-parts_v)
-                    parts = parts[idx]
+                # Now order them
+                parts_v = parts[:, i_v]
+                idx = np.argsort(-parts_v)
+                parts = parts[idx]
 
-                parts = np.concatenate((muons, electrons, parts))
-                pt_eta_phi = parts[:,5:8]
+                if electrons.shape[0] > 0 and muons.shape[0] > 0:
+                    if electrons[0, i_v] > muons[0, i_v]:
+                        parts = np.concatenate((electrons, muons, parts))
+                    else:
+                        parts = np.concatenate((muons, electrons, parts))
+                elif electrons.shape[0] > 0:
+                    parts = np.concatenate((electrons, parts))
+                elif muons.shape[0] > 0:
+                    parts = np.concatenate((muons, parts))
+                else:
+                    print('[WARNING]: No lepton founds')
+
                 #Rescale Pt
                 parts[:,5] /= 10.
+                pt_eta_phi = parts[:,5:8]
                 charge = parts[:, -1]
                 # 0 = Muon, 1 = Electron, 2 = Photon, 3 = Charged hadron, 4 = Neutral hadron
                 pId = 0*parts[:, 18] + 1*parts[:, 17] + 2*parts[:, 16] + 3*parts[:, 14] + 4*parts[:, 15]
 
                 features = np.column_stack((pt_eta_phi, charge, pId)).astype(np.float16).reshape((1, args.MaxPart, 5))
                 dataset = np.concatenate((dataset, features))
+                N_evts_processed += 1
 
-                if args.MaxEvts > 0 and dataset.shape[0] >= args.MaxEvts:
+                if args.MaxChunk > 0 and dataset.shape[0] >= args.MaxChunk:
+                    print('[INFO]: Saving chunk', N_chunks, 'at event', N_evts_processed)
+                    np.save(outname.replace('.npy', '_{}.npy'.format(N_chunks)), dataset)
+                    N_chunks += 1
+                    dataset = np.zeros((0, args.MaxPart, 5)).astype(np.float16)
+
+
+                if args.MaxEvts > 0 and N_evts_processed >= args.MaxEvts:
                     break
+            f.close()
+        except KeyboardInterrupt:
+            args.MaxEvts = N_evts_processed
+            break
         except:
             errors += 1
-            print('[{}]'.format(errors), fname, 'failed')
+            print('[ERROR {}]'.format(errors), fname, 'failed')
 
-        if args.MaxEvts > 0 and dataset.shape[0] >= args.MaxEvts:
+        if args.MaxEvts > 0 and N_evts_processed >= args.MaxEvts:
             break
+
+    if N_chunks > 1:
+        flist = glob(outname.replace('.npy', '_*.npy'))
+        print('Merging {} chunks...'.format(len(flist)))
+
+        pb = ProgressBar(1+len(flist))
+        pb.show(0)
+        for i, fname in enumerate(flist):
+            pb.show(i+1)
+            dataset = np.concatenate((dataset, np.load(fname)))
+
+        print('Cleaning chunks...')
+        for fname in flist:
+            os.system('rm ' + fname)
 
     print('Saving dataset with {} entries from {} files: '.format(dataset.shape[0], i+1), outname)
     np.save(outname, dataset)
