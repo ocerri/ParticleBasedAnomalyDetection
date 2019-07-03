@@ -1,3 +1,3 @@
 conda activate PartAN
 
-export PYTHONPATH=$PWD/lib:$PYTHONPATH
+export PYTHONPATH=./lib:$PYTHONPATH
