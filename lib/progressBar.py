@@ -1,7 +1,7 @@
 import time, sys
 
 class ProgressBar():
-    def __init__(self, maxEntry, percentPrecision = 5, headLabel = ''):
+    def __init__(self, maxEntry, percentPrecision=5, showEvery=2, headLabel=''):
         self.maxEntry = maxEntry
         self.percentPrecision = percentPrecision
 
@@ -12,9 +12,11 @@ class ProgressBar():
         self.headLabel = headLabel
 
         self.maxPrintoutLen = 0
+        self.showEvery = showEvery
 
     def show(self, entry, tail_label = ''):
-        if entry%self.setpSize==0:
+        if entry%self.setpSize==0 or time.time() - self.lastShown > self.showEvery:
+            self.lastShown = time.time()
             if entry>0:
                 sys.stdout.write('\r')
             else:

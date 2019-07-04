@@ -15,6 +15,7 @@ conda install pytorch torchvision -c pytorch
 # conda install pytorch torchvision cudatoolkit=10.0 -c pytorch
 
 conda install matplotlib
+conda install -c conda-forge prettytable
 pip install gpustat
 
 # Not used for the moment
