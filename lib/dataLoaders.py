@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 from torch.utils import data
 from prettytable import PrettyTable
@@ -13,10 +14,11 @@ class ParticleDataset(data.Dataset):
         self.SM_fraction = np.array([0.592, 0.338, 0.067, 0.003])
         self.BSM_names = ['Ato4l', 'leptoquark', 'hToTauTau', 'hChToTauNu']
 
-        process_labels = {'Ato4l':r'$A\to 4\ell$',
-                          'leptoquark':r'$LQ$',
-                          'hToTauTau':r'$h^{0}\to \tau\tau$',
-                          'hChToTauNu':r'$h^{\pm}\to \tau\nu$'}
+        self.process_labels = {'Ato4l':r'$A\to 4\ell$',
+                               'leptoquark':r'$LQ$',
+                               'hToTauTau':r'$h^{0}\to \tau\tau$',
+                               'hChToTauNu':r'$h^{\pm}\to \tau\nu$'}
+        self.process_colors = {'Ato4l':'k', 'leptoquark':'g', 'hToTauTau':'r', 'hChToTauNu':'b'}
 
         self.N_part = N_part
 
@@ -87,13 +89,13 @@ class ParticleDataset(data.Dataset):
             sys.stdout.write('Loading '+n)
             sys.stdout.flush()
             self.valSamples[n] = np.load(self.template.format(n)).astype(np.float32)[:, :self.N_part, :self.N_features]
-            sys.stdout.write(' ({:.1f}k)\n'.format(self.valSamples[n].shape[0]))
+            sys.stdout.write(' ({:.1f}k)\n'.format(1e-3*self.valSamples[n].shape[0]))
         for n in self.SM_names:
             sys.stdout.write('Loading '+n)
             sys.stdout.flush()
             idx_start = self.N_train_SM[n]
             self.valSamples[n] = np.load(self.template.format(n)).astype(np.float32)[idx_start:, :self.N_part, :self.N_features]
-            sys.stdout.write(' ({:.1f}k)\n'.format(self.valSamples[n].shape[0]))
+            sys.stdout.write(' ({:.1f}k)\n'.format(1e-3*self.valSamples[n].shape[0]))
 
         l = np.zeros(4)
         for i,n in enumerate(self.SM_names):
