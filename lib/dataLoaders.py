@@ -38,6 +38,7 @@ class ParticleDataset(data.Dataset):
         raw_sample = {}
         l = np.zeros(4)
         for i,n in enumerate(self.SM_names):
+            print('Fetching', n)
             raw_sample[n] = np.load(self.template.format(n))
             l[i] = raw_sample[n].shape[0]
 
@@ -123,7 +124,7 @@ class ParticleDataset(data.Dataset):
                 w = np.float128(self.SM_fraction[i]/ self.SM_fraction[i_min]) * np.float128(l[i_min]/l[i])
                 self.SM_val_weights.append(w)
             print('SM validation weights')
-            print(zip(self.SM_names, self.SM_val_weights))
+            print(list(zip(self.SM_names, self.SM_val_weights)))
 
     def charge(self, target):
         self.inputs = target
