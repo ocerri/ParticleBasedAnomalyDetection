@@ -17,13 +17,22 @@ class ParticleDataset(data.Dataset):
         self.process_labels = {'Ato4l':r'$A\to 4\ell$',
                                'leptoquark':r'$LQ$',
                                'hToTauTau':r'$h^{0}\to \tau\tau$',
-                               'hChToTauNu':r'$h^{\pm}\to \tau\nu$'}
-        self.process_colors = {'Ato4l':'k', 'leptoquark':'g', 'hToTauTau':'r', 'hChToTauNu':'b'}
+                               'hChToTauNu':r'$h^{\pm}\to \tau\nu$',
+                               'SMMix': 'SM Mix'
+                               }
+        self.process_colors = {'Ato4l':'k',
+                               'leptoquark':'g',
+                               'hToTauTau':'r',
+                               'hChToTauNu':'b',
+                               'SMMix':'darkorange'
+                               }
 
         self.N_part = N_part
 
         self.N_features = N_features
         self.feature_names = ['Pt', 'eta', 'phi', 'charge', 'pId'][:N_features]
+
+        self.loss = {}
 
     def loadTrainSM(self, training_split_fraction=0.5, N_train_max = 1e10):
         raw_sample = {}
@@ -83,34 +92,38 @@ class ParticleDataset(data.Dataset):
         print('Tot training {:.2f} M'.format(self.SMMix_train.shape[0]/1.0e6))
         print('Tot val {:.2f} M'.format(self.SMMix_val.shape[0]/1.0e6))
 
-    def loadValidationSamples(self):
-        self.valSamples = {}
-        for n in self.BSM_names:
-            sys.stdout.write('Loading '+n)
-            sys.stdout.flush()
-            self.valSamples[n] = np.load(self.template.format(n)).astype(np.float32)[:, :self.N_part, :self.N_features]
-            sys.stdout.write(' ({:.1f}k)\n'.format(1e-3*self.valSamples[n].shape[0]))
-        for n in self.SM_names:
-            sys.stdout.write('Loading '+n)
-            sys.stdout.flush()
-            idx_start = self.N_train_SM[n]
-            self.valSamples[n] = np.load(self.template.format(n)).astype(np.float32)[idx_start:, :self.N_part, :self.N_features]
-            sys.stdout.write(' ({:.1f}k)\n'.format(1e-3*self.valSamples[n].shape[0]))
+    def loadValidationSamples(self, samples='BSM+SM'):
+        if not hasattr(self, 'valSamples'):
+            self.valSamples = {}
 
-        l = np.zeros(4)
-        for i,n in enumerate(self.SM_names):
-            l[i] = self.valSamples[n].shape[0]
+        if 'BSM' in samples:
+            for n in self.BSM_names:
+                sys.stdout.write('Loading '+n)
+                sys.stdout.flush()
+                self.valSamples[n] = np.load(self.template.format(n)).astype(np.float32)[:, :self.N_part, :self.N_features]
+                sys.stdout.write(' ({:.1f}k)\n'.format(1e-3*self.valSamples[n].shape[0]))
 
-        i_min = np.argmin(l/self.SM_fraction)
-        print('SM Mix limiting stat. sample: {} ({:.2f}M)'.format(self.SM_names[i_min], l[i_min]*1e-6))
+        if 'SM' in samples.replace('BSM', ''):
+            for n in self.SM_names:
+                sys.stdout.write('Loading '+n)
+                sys.stdout.flush()
+                idx_start = self.N_train_SM[n]
+                self.valSamples[n] = np.load(self.template.format(n)).astype(np.float32)[idx_start:, :self.N_part, :self.N_features]
+                sys.stdout.write(' ({:.1f}k)\n'.format(1e-3*self.valSamples[n].shape[0]))
 
-        self.SM_val_weights = []
-        for i,n in enumerate(self.SM_names):
-            w = np.float128(self.SM_fraction[i]/ self.SM_fraction[i_min]) * np.float128(l[i_min]/l[i])
-            self.SM_val_weights.append(w)
-        print('SM validation weights')
-        print(self.SM_names)
-        print(self.SM_val_weights)
+            l = np.zeros(4)
+            for i,n in enumerate(self.SM_names):
+                l[i] = self.valSamples[n].shape[0]
+
+            i_min = np.argmin(l/self.SM_fraction)
+            print('SM Mix limiting stat. sample: {} ({:.2f}M)'.format(self.SM_names[i_min], l[i_min]*1e-6))
+
+            self.SM_val_weights = []
+            for i,n in enumerate(self.SM_names):
+                w = np.float128(self.SM_fraction[i]/ self.SM_fraction[i_min]) * np.float128(l[i_min]/l[i])
+                self.SM_val_weights.append(w)
+            print('SM validation weights')
+            print(zip(self.SM_names, self.SM_val_weights))
 
     def charge(self, target):
         self.inputs = target
