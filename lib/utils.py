@@ -1,9 +1,17 @@
 #['EvtId', 'Energy', 'Px', 'Py', 'Pz', 'Pt', 'Eta', 'Phi', 'vtxX', 'vtxY', 'vtxZ', 'ChPFIso', 'GammaPFIso', 'NeuPFIso', 'isChHad', 'isNeuHad', 'isGamma', 'isEle', 'isMu', 'Charge']
 import numpy as np
+import torch
 
 class Bauble():
     def __init__(self):
         pass
+    
+def ELU_ProbNorm(x, dim=-1, bottom=1e-4):
+    x_act = 1 + torch.nn.functional.elu(x) + bottom
+    size = np.array(x.shape)
+    size[-1] = 1
+    norm = torch.sum(x_act, dim=dim).view(tuple(size))
+    return torch.div(x_act,norm)
 
 class EarlyStopping():
     def __init__(self, patient=5):
