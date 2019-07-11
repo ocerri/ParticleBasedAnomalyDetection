@@ -1,6 +1,10 @@
-# To do
+# To do Thong
+- New version with customized loss
+- Try with more particles
+- Go on overleaf and update the model section
+- Make ROC plot with model comparison
 
-- Add Loss distributions for SM and BSM
-- Try dense v3 with L2 regularization on the latent and use that as anomaly detection
-- Try difference between AE with L2 and VAE
-- Do it with more particle, order 100
+# To do Olmo
+
+- Make new dataset with 200 particles
+- Take a look at the overleaf
