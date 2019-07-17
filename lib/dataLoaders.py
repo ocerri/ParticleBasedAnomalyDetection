@@ -18,13 +18,21 @@ class ParticleDataset(data.Dataset):
                                'leptoquark':r'$LQ$',
                                'hToTauTau':r'$h^{0}\to \tau\tau$',
                                'hChToTauNu':r'$h^{\pm}\to \tau\nu$',
-                               'SMMix': 'SM Mix'
+                               'SMMix': 'SM Mix',
+                               'Wlnu': r'$W\to\ell\nu$',
+                               'qcd': 'QCD',
+                               'Zll': r'$Z\to\ell\ell$',
+                               'ttbar': r'$t\bar{t}$'
                                }
         self.process_colors = {'Ato4l':'k',
                                'leptoquark':'g',
                                'hToTauTau':'r',
                                'hChToTauNu':'b',
-                               'SMMix':'darkorange'
+                               'SMMix':'darkorange',
+                               'Wlnu': 'm',
+                               'qcd': 'y',
+                               'Zll': 'c',
+                               'ttbar': 'lightsteelblue'
                                }
 
         self.N_part = N_part

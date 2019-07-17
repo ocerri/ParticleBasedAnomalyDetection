@@ -6,5 +6,11 @@
 
 # To do Olmo
 
-- Make new dataset with 200 particles
-- Take a look at the overleaf
+- Fix the the to add 1/2
+
+# Trials to understand the model
+
+- Why it does not understand charge and ID
+- Vairationa vs Non-Variational dense
+- MSE vs NLL
+- Latent space dimension
