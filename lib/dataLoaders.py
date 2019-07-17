@@ -101,7 +101,8 @@ class ParticleDataset(data.Dataset):
         print('Tot training {:.2f} M'.format(self.SMMix_train.shape[0]/1.0e6))
         print('Tot val {:.2f} M'.format(self.SMMix_val.shape[0]/1.0e6))
 
-    def loadValidationSamples(self, samples='BSM+SM'):
+    def loadValidationSamples(self, samples='BSM+SM', N_max=1e7):
+        N_max = int(N_max)
         if not hasattr(self, 'valSamples'):
             self.valSamples = {}
 
@@ -109,7 +110,7 @@ class ParticleDataset(data.Dataset):
             for n in self.BSM_names:
                 sys.stdout.write('Loading '+n)
                 sys.stdout.flush()
-                self.valSamples[n] = np.load(self.template.format(n)).astype(np.float32)[:, :self.N_part, :self.N_features]
+                self.valSamples[n] = np.load(self.template.format(n)).astype(np.float32)[:N_max, :self.N_part, :self.N_features]
                 sys.stdout.write(' ({:.1f}k)\n'.format(1e-3*self.valSamples[n].shape[0]))
 
         if 'SM' in samples.replace('BSM', ''):
@@ -117,7 +118,7 @@ class ParticleDataset(data.Dataset):
                 sys.stdout.write('Loading '+n)
                 sys.stdout.flush()
                 idx_start = self.N_train_SM[n]
-                self.valSamples[n] = np.load(self.template.format(n)).astype(np.float32)[idx_start:, :self.N_part, :self.N_features]
+                self.valSamples[n] = np.load(self.template.format(n)).astype(np.float32)[idx_start:N_max+idx_start, :self.N_part, :self.N_features]
                 sys.stdout.write(' ({:.1f}k)\n'.format(1e-3*self.valSamples[n].shape[0]))
 
             l = np.zeros(4)
