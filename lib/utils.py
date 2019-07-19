@@ -14,17 +14,18 @@ def ELU_ProbNorm(x, dim=-1, bottom=1e-4):
     return torch.div(x_act,norm)
 
 class EarlyStopping():
-    def __init__(self, patient=5):
+    def __init__(self, patient=5, threshold=1e-3):
         self.best = None
         self.NoImprovement = 0
         self.patient = patient
+        self.threshold = threshold
 
     def check(self, val):
         if self.best is None:
             self.best = val
             self.NoImprovement = 0
         else:
-            if self.best > val:
+            if self.best - self.threshold > val:
                 self.best = val
                 self.NoImprovement = 0
             else:

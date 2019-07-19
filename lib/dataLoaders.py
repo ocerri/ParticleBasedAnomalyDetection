@@ -136,6 +136,11 @@ class ParticleDataset(data.Dataset):
             print(list(zip(self.SM_names, self.SM_val_weights)))
 
     def charge(self, target):
+        # HACK TO CORRECT THE BUG IN DPHI WHICH WAS EXISTING IN V2 BEFORE 2019_07_19
+        new_phi = np.mod(target[:,:,3] - target[:,0,3], 2*np.pi)
+        new_phi = np.where(new_phi < -np.pi, new_phi+2*np.pi, np.where(new_phi > np.pi, phi - 2*np.pi, new_phi))
+        target[:,:,3] = new_phi
+        
         self.inputs = target
 
     def __len__(self):
