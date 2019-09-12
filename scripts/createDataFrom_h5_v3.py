@@ -44,7 +44,7 @@ print('')
 
 #Output directory
 date = datetime.date.today()
-outdir = '{}{:02d}{:02d}_{}part_{}Order_v2/'.format(date.year, date.month, date.day, args.MaxPart, args.order)
+outdir = '{}{:02d}{:02d}_{}part_{}Order_v3/'.format(date.year, date.month, date.day, args.MaxPart, args.order)
 outdir = args.output_path + outdir
 
 if os.path.isdir(outdir):
@@ -80,7 +80,7 @@ for sample_label in args.sample_label:
             print('File '+outname+' already existing')
             continue
 
-    dataset = np.zeros((0, args.MaxPart, 5)).astype(np.float16)
+    dataset = np.zeros((0, args.MaxPart, 11)).astype(np.float16)
     N_evts_processed = 0
     N_chunks = 1
 
@@ -165,15 +165,31 @@ for sample_label in args.sample_label:
             pt_eta  = parts[:,5:7]
             phi = np.mod(parts[:,7] - parts[0,7], 2*np.pi)
             phi = np.where(phi < -np.pi, phi+2*np.pi, np.where(phi > np.pi, phi - 2*np.pi, phi))
-            charge = parts[:, -1]
-            # 0 = Muon, 1 = Electron, 2 = Photon, 3 = Charged hadron, 4 = Neutral hadron
-            pId = 0*parts[:, 18] + 1*parts[:, 17] + 2*parts[:, 16] + 3*parts[:, 14] + 4*parts[:, 15]
 
-            features = np.column_stack((pt_eta, phi, charge, pId)).astype(np.float16)
+            pCat = np.zeros((parts.shape[0], 8))
+
+            mup_sel = np.logical_and(parts[:, -1]>0, parts[:, 18])
+            pCat[mup_sel, 0] = 1
+            mum_sel = np.logical_and(parts[:, -1]<0, parts[:, 18])
+            pCat[mum_sel, 1] = 1
+            ep_sel = np.logical_and(parts[:, -1]>0, parts[:, 17])
+            pCat[ep_sel, 2] = 1
+            em_sel = np.logical_and(parts[:, -1]<0, parts[:, 17])
+            pCat[em_sel, 3] = 1
+            hp_sel = np.logical_and(parts[:, -1]>0, parts[:, 14])
+            pCat[hp_sel, 4] = 1
+            hm_sel = np.logical_and(parts[:, -1]<0, parts[:, 14])
+            pCat[hm_sel, 5] = 1
+            g_sel = parts[:, 16] == 1
+            pCat[g_sel, 6] = 1
+            h0_sel = parts[:, 15] == 1
+            pCat[h0_sel, 7] = 1
+
+            features = np.column_stack((pt_eta, phi, pCat)).astype(np.float16)
             if features.shape[0] < args.MaxPart:
-                padding = np.zeros((args.MaxPart - features.shape[0], 5)).astype(np.float16)
+                padding = np.zeros((args.MaxPart - features.shape[0], 11)).astype(np.float16)
                 features = np.concatenate((features, padding))
-            features = features.reshape((1, args.MaxPart, 5))
+            features = features.reshape((1, args.MaxPart, 11))
             dataset = np.concatenate((dataset, features))
             N_evts_processed += 1
 
@@ -181,7 +197,7 @@ for sample_label in args.sample_label:
                 print('[INFO]: Saving chunk', N_chunks, 'at event', N_evts_processed)
                 np.save(outname.replace('.npy', '_{}.npy'.format(N_chunks)), dataset)
                 N_chunks += 1
-                dataset = np.zeros((0, args.MaxPart, 5)).astype(np.float16)
+                dataset = np.zeros((0, args.MaxPart, 11)).astype(np.float16)
 
 
             if args.MaxEvts > 0 and N_evts_processed >= args.MaxEvts:

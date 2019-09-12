@@ -25,10 +25,10 @@ for i, fname in enumerate(flist):
     else:
         dataset = np.concatenate((dataset, np.load(fname)))
 
+print('Saving dataset with {} entries from {} files: '.format(dataset.shape[0], i+1), args.output)
+np.save(args.output, dataset)
+
 if args.remove:
     print('Cleaning files...')
     for fname in flist:
         os.system('rm ' + fname)
-
-print('Saving dataset with {} entries from {} files: '.format(dataset.shape[0], i+1), args.output)
-np.save(args.output, dataset)
