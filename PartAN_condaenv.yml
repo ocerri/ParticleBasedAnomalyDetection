@@ -1,0 +1,7 @@
+name: PartAN
+channels:
+  - conda-forge
+  - https://conda.anaconda.org/NLeSC
+  - defaults
+prefix: /afs/cern.ch/user/o/ocerri/.conda/envs/PartAN
+
